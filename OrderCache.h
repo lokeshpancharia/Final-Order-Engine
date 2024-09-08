@@ -4,6 +4,9 @@
 #include <vector>
 #include <unordered_map>
 #include <map>
+#include <shared_mutex>
+#include <mutex>
+
 
 class Order
 {
@@ -101,7 +104,12 @@ class OrderCache : public OrderCacheInterface
 
   std::multimap<std::string, Order> ordersBySecId;  // Maps securityId -> Order
   std::unordered_map<std::string, std::multimap<std::string, Order>::iterator> ordersById;  // Maps orderId -> iterator in ordersBySecId
-    std::unordered_map<std::string, std::vector<std::multimap<std::string, Order>::iterator>> ordersByUser;  // Maps user -> list of order iterators
+  std::unordered_map<std::string, std::vector<std::multimap<std::string, Order>::iterator>> ordersByUser;  // Maps user -> list of order iterators
+
+    // Add shared mutex for each map to control access
+    mutable std::shared_mutex secIdMutex;  // Protects ordersBySecId
+    mutable std::shared_mutex orderIdMutex;  // Protects ordersById
+    mutable std::shared_mutex userMutex;  // Protects ordersByUser
 
     // Helper method to remove an order from the user map
   void removeOrderFromUserMap(const std::string& user, std::multimap<std::string, Order>::iterator orderIt);

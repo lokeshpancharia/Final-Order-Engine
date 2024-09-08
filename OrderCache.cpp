@@ -7,8 +7,15 @@
 #include <iostream>
 #include <algorithm>
 
+
+
 // Add an order to the cache
 void OrderCache::addOrder(Order order) {
+    // Acquire exclusive locks since we are modifying the data structures
+    std::unique_lock<std::shared_mutex> secIdLock(secIdMutex);
+    std::unique_lock<std::shared_mutex> orderIdLock(orderIdMutex);
+    std::unique_lock<std::shared_mutex> userLock(userMutex);
+
     auto it = ordersBySecId.emplace(order.securityId(), order);
     ordersById[order.orderId()] = it;
     ordersByUser[order.user()].push_back(it);
@@ -16,8 +23,11 @@ void OrderCache::addOrder(Order order) {
 
 // Cancel a specific order by its orderId
 void OrderCache::cancelOrder(const std::string& orderId) {
+    std::unique_lock<std::shared_mutex> orderIdLock(orderIdMutex);
     auto it = ordersById.find(orderId);
     if (it != ordersById.end()) {
+        std::unique_lock<std::shared_mutex> secIdLock(secIdMutex);
+        std::unique_lock<std::shared_mutex> userLock(userMutex);
         // Remove from the security map
         ordersBySecId.erase(it->second);
         // Remove from the user list
@@ -29,8 +39,11 @@ void OrderCache::cancelOrder(const std::string& orderId) {
 
 // Cancel all orders for a specific user
 void OrderCache::cancelOrdersForUser(const std::string& user) {
+    std::unique_lock<std::shared_mutex> userLock(userMutex);
     auto it = ordersByUser.find(user);
     if (it != ordersByUser.end()) {
+        std::unique_lock<std::shared_mutex> secIdLock(secIdMutex);
+        std::unique_lock<std::shared_mutex> orderIdLock(orderIdMutex);
         for (auto orderIt : it->second) {
             ordersBySecId.erase(orderIt);
             ordersById.erase(orderIt->second.orderId());
@@ -41,6 +54,10 @@ void OrderCache::cancelOrdersForUser(const std::string& user) {
 
 // Cancel orders for a specific security with a minimum quantity
 void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string& securityId, unsigned int minQty) {
+    std::unique_lock<std::shared_mutex> secIdLock(secIdMutex);
+    std::unique_lock<std::shared_mutex> orderIdLock(orderIdMutex);
+    std::unique_lock<std::shared_mutex> userLock(userMutex);
+
     auto range = ordersBySecId.equal_range(securityId);
     for (auto it = range.first; it != range.second; ) {
         if (it->second.qty() >= minQty) {
@@ -55,6 +72,7 @@ void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string& securityI
 
 // Get the total matching size for a security
 unsigned int OrderCache::getMatchingSizeForSecurity(const std::string& securityId) {
+     std::shared_lock<std::shared_mutex> secIdLock(secIdMutex);
     unsigned int totalMatchingSize = 0;
     auto range = ordersBySecId.equal_range(securityId);
 
@@ -106,6 +124,7 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string& securityI
 
 // Get all orders
 std::vector<Order> OrderCache::getAllOrders() const {
+    std::shared_lock<std::shared_mutex> secIdLock(secIdMutex);
     std::vector<Order> allOrders;
     for (const auto& orderPair : ordersBySecId) {
         allOrders.push_back(orderPair.second);
