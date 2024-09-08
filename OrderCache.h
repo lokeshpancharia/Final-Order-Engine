@@ -80,49 +80,31 @@ class OrderCache : public OrderCacheInterface
 {
 
 public:
-  OrderCache()
-  {
-    init();
-  }
+    OrderCache();
 
-  void addOrder(Order order) override;
-
-  void cancelOrder(const std::string &orderId) override;
-
-  void cancelOrdersForUser(const std::string &user) override;
-
-  void cancelOrdersForSecIdWithMinimumQty(const std::string &securityId, unsigned int minQty) override;
-
-  unsigned int getMatchingSizeForSecurity(const std::string &securityId) override;
-
-  std::vector<Order> getAllOrders() const override;
+    void addOrder(Order order) override;
+    void cancelOrder(const std::string &orderId) override;
+    void cancelOrdersForUser(const std::string &user) override;
+    void cancelOrdersForSecIdWithMinimumQty(const std::string &securityId, unsigned int minQty) override;
+    unsigned int getMatchingSizeForSecurity(const std::string &securityId) override;
+    std::vector<Order> getAllOrders() const override;
 
 private:
- // Helper methods and member variables
-  void init();
-  int getSecurityId(const std::string &securityId);
-  int getCompanyId(const std::string &companyId);
-  void removeOrderFromSecurityId(const std::string &orderId);
+    void initializeCache();
+    int getSecurityId(const std::string &securityId);
+    int getCompanyId(const std::string &companyId);
+    void removeOrderFromSecurity(const std::string &orderId);
 
-  std::unordered_map<std::string, Order> orderlist; // Order storage
-  std::unordered_map<std::string, std::unordered_set<std::string>> userOrders; // Orders by user
+    std::unordered_map<std::string, Order> orders;                      // Order storage
+    std::unordered_map<std::string, std::unordered_set<std::string>> userOrders; // Orders by user
+    std::unordered_map<int, std::unordered_set<std::string>> secQtyOrders; // Orders by security ID and quantity
 
-  static constexpr unsigned int NUM_USERS = 1005;
-  static constexpr unsigned int NUM_COMPANIES = 105;
-  static constexpr unsigned int NUM_SECURITIES = 1005;
+    static constexpr unsigned int NUM_SECURITIES = 1005;
+    static constexpr unsigned int NUM_COMPANIES = 105;
 
-  // Security by company, 2D array for tracking
-  int securityByCompany[NUM_SECURITIES][NUM_COMPANIES][2];
+    int securityByCompany[NUM_SECURITIES][NUM_COMPANIES][2]{}; // Security by company, sides Buy/Sell
 
-    // Store sides (Buy/Sell)
-  std::vector<std::string> sides{"Buy", "Sell"};
-
-    // Mapping security and company IDs to integers
-  std::unordered_map<std::string, int> securityIdInteger;
-  std::unordered_map<std::string, int> companyIdInteger;
-
-    // Orders by security quantity
-  std::unordered_map<int, std::unordered_set<std::string>> secQtyOrders;
-
-  int totalOrders = 0;
+    std::unordered_map<std::string, int> securityIdMap;
+    std::unordered_map<std::string, int> companyIdMap;
+    std::vector<std::string> sides{"Buy", "Sell"};
 };
