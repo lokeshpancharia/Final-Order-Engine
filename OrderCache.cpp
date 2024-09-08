@@ -124,13 +124,11 @@ void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string &securityI
 unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityId)
 {
   int secId = getSecurityId(securityId);
-  int i, j;
   unsigned int totalMatching  = 0;
-  for (i = 1; i < companyIdInteger.size(); i++)
+  int i,j; // loop variables
+  for (i = 1; i < companyIdInteger.size(); ++i)
   {
-    int j = i + 1;
-
-    for (; j <= companyIdInteger.size(); j++)
+    for (j=i+1; j <= companyIdInteger.size(); ++j)
     {
       if (!securityByCompany[secId][i][0])
         break;
@@ -142,7 +140,7 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityI
   }
 
   // do for last company also by iterating from 1st to last
-  for (j = 1; j < companyIdInteger.size(); j++)
+  for (j = 1; j < companyIdInteger.size(); ++j)
   {
     if (!securityByCompany[secId][i][0])
       break;
