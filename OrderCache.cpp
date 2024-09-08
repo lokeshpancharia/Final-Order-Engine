@@ -1,6 +1,18 @@
 // Todo: your implementation of the OrderCache...
 #include "OrderCache.h"
 #include <algorithm>  // for std::min
+#include <thread>
+
+
+std::unordered_map<std::string, std::mutex> orderLocks; // Map of orderId to mutex
+std::mutex orderLocksMapMutex; // Mutex to protect access to orderLocks map
+
+// Helper function to get or create a mutex for a specific orderId
+std::mutex& OrderCache::getOrderLock(const std::string& orderId) {
+    std::unique_lock lock(orderLocksMapMutex); // Lock to ensure safe access to the map
+    return orderLocks[orderId]; // Will create the mutex if it doesn't exist
+}
+
 // Initialize
 void OrderCache::init()
 {
@@ -39,6 +51,9 @@ int OrderCache::getCompanyId(const std::string &companyId)
 // Remove order from security ID
 void OrderCache::removeOrderFromSecurityId(const std::string &orderId)
 {
+  std::mutex &orderLock = getOrderLock(orderId); // Get the lock for this orderId
+    std::lock_guard lock(orderLock); // Lock the specific orderId
+
   auto it = orderlist.find(orderId);
   if (it != orderlist.end())
   {
@@ -57,6 +72,8 @@ void OrderCache::removeOrderFromSecurityId(const std::string &orderId)
 // Add an order to the cache
 void OrderCache::addOrder(Order order)
 {
+    std::mutex &orderLock = getOrderLock(order.orderId()); // Get the lock for this orderId
+    std::lock_guard lock(orderLock); // Lock the specific orderId
     orderlist.emplace(order.orderId(), order);
     userOrders[order.user()].emplace(order.orderId());
 
@@ -81,6 +98,27 @@ void OrderCache::cancelOrder(const std::string &orderId)
       orderlist.erase(orderId);
   }
 }
+
+
+void OrderCache::removeOrderInParallel(const std::vector<std::string>& orderIds)
+{
+    std::vector<std::thread> threads;
+
+    for (const auto& orderId : orderIds)
+    {
+        threads.emplace_back([this, &orderId]() {
+            this->removeOrderFromSecurityId(orderId);
+        });
+    }
+
+    for (auto& thread : threads)
+    {
+        if (thread.joinable())
+            thread.join();
+    }
+}
+
+
 // Cancel all orders for a specific user
 void OrderCache::cancelOrdersForUser(const std::string &user)
 {
@@ -88,11 +126,17 @@ void OrderCache::cancelOrdersForUser(const std::string &user)
   if (it == userOrders.end())
     return;
 
-  std::vector<std::string> ordersToCancel(it->second.begin(), it->second.end());
-  for (const auto &orderId : ordersToCancel)
-  {
-    cancelOrder(orderId);
-  }
+ std::vector<std::string> ordersToCancel(it->second.begin(), it->second.end());
+
+    // Divide the work into smaller chunks and process in parallel
+    int segmentSize = 4; // Adjust size according to performance needs
+    for (size_t i = 0; i < ordersToCancel.size(); i += segmentSize)
+    {
+        std::vector<std::string> segment(ordersToCancel.begin() + i, 
+                 ordersToCancel.begin() + std::min(i + segmentSize, ordersToCancel.size()));
+        removeOrderInParallel(segment);
+    }
+
   userOrders[user].clear();
 }
 
@@ -114,11 +158,16 @@ void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string &securityI
     }
   }
 
-  for (const auto &orderId : ordersToRemove)
-  {
-    cancelOrder(orderId);
-    it->second.erase(orderId);
-  }
+  // Divide the work into smaller chunks and process in parallel
+    int segmentSize = 4; // Adjust size according to performance needs
+    for (size_t i = 0; i < ordersToRemove.size(); i += segmentSize)
+    {
+        std::vector<std::string> segment(ordersToRemove.begin() + i, 
+                  ordersToRemove.begin() + std::min(i + segmentSize, ordersToRemove.size()));
+        removeOrderInParallel(segment);
+    }
+
+   it->second.clear();
 }
 
 // Get the matching size for a given security ID

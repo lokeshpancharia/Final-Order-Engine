@@ -6,7 +6,8 @@
 #include <unordered_set>
 #include <queue>
 #include <utility>
-
+#include <mutex>
+#include <shared_mutex>
 
 class Order
 {
@@ -103,6 +104,8 @@ private:
   int getSecurityId(const std::string &securityId);
   int getCompanyId(const std::string &companyId);
   void removeOrderFromSecurityId(const std::string &orderId);
+  void removeOrderInParallel(const std::vector<std::string>& orderIds);
+  std::mutex& getOrderLock(const std::string& orderId);
 
   std::unordered_map<std::string, Order> orderlist; // Order storage
   std::unordered_map<std::string, std::unordered_set<std::string>> userOrders; // Orders by user
