@@ -755,59 +755,6 @@ TEST_F(OrderCacheTest, P9_PerfTest_500000_Orders_Multithreaded) {
 }
 
 
-// Test P10: Add and match 1,000,000 orders concurrently
-TEST_F(OrderCacheTest, P10_PerfTest_1000000_Orders_Multithreaded) {
-    CHECK_GLOBAL_FAILURE_FLAG();
-
-    unsigned int NUM_ORDERS = 1000000;
-    std::vector<Order> orders = generateOrders(NUM_ORDERS);
-    const unsigned int numThreads = 10;
-    const unsigned int ordersPerThread = NUM_ORDERS / numThreads;
-    std::vector<std::thread> threads;
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    // Add orders to the cache concurrently
-    for (unsigned int t = 0; t < numThreads; ++t) {
-        threads.emplace_back([this, t, &orders, ordersPerThread]() {
-            for (unsigned int i = t * ordersPerThread; i < (t + 1) * ordersPerThread; ++i) {
-                cache.addOrder(orders[i]);
-            }
-        });
-    }
-
-    // Join threads
-    for (auto& thread : threads) {
-        thread.join();
-    }
-
-    // Clear thread vector for reuse
-    threads.clear();
-
-    // Get matching size concurrently
-    for (unsigned int t = 0; t < numThreads; ++t) {
-        threads.emplace_back([this]() {
-            for (const auto &secId : secIds) {
-                cache.getMatchingSizeForSecurity(secId);
-            }
-        });
-    }
-
-    // Join threads
-    for (auto& thread : threads) {
-        thread.join();
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-    double ncu = duration / benchmark_time;  // Calculate the NCU based on benchmark
-
-    // Display the result
-    std::cout << BLUE_COLOR << "[     INFO ] Matched " << NUM_ORDERS << " orders in " << ncu << " NCUs (" << duration << "ms)" << RESET_COLOR << std::endl;
-    ASSERT_LE(ncu, 1500);
-}
-
 
 // Test P11: Add and match 1,000,000 orders concurrently with optimized code
 TEST_F(OrderCacheTest, P11_PerfTest_1000000_Orders_Multithreaded_Optimized) {
