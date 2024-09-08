@@ -1,0 +1,62 @@
+[==========] Running 23 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 23 tests from OrderCacheTest
+[34m[     INFO ] 1 NCU = 5ms[0m
+[ RUN      ] OrderCacheTest.U1_UnitTest_addOrder
+[       OK ] OrderCacheTest.U1_UnitTest_addOrder (1 ms)
+[ RUN      ] OrderCacheTest.U2_UnitTest_getAllOrders
+[       OK ] OrderCacheTest.U2_UnitTest_getAllOrders (0 ms)
+[ RUN      ] OrderCacheTest.U3_UnitTest_cancelOrder
+[       OK ] OrderCacheTest.U3_UnitTest_cancelOrder (0 ms)
+[ RUN      ] OrderCacheTest.U4_UnitTest_cancelOrdersForUser
+[       OK ] OrderCacheTest.U4_UnitTest_cancelOrdersForUser (0 ms)
+[ RUN      ] OrderCacheTest.U5_UnitTest_cancelOrdersForSecIdWithMinimumQty
+[       OK ] OrderCacheTest.U5_UnitTest_cancelOrdersForSecIdWithMinimumQty (0 ms)
+[ RUN      ] OrderCacheTest.U6_UnitTest_getMatchingSizeForSecurityTest_Example1
+[       OK ] OrderCacheTest.U6_UnitTest_getMatchingSizeForSecurityTest_Example1 (0 ms)
+[ RUN      ] OrderCacheTest.U7_UnitTest_getMatchingSizeForSecurityTest_Example2
+[       OK ] OrderCacheTest.U7_UnitTest_getMatchingSizeForSecurityTest_Example2 (0 ms)
+[ RUN      ] OrderCacheTest.U8_UnitTest_getMatchingSizeForSecurityTest_Example3
+[       OK ] OrderCacheTest.U8_UnitTest_getMatchingSizeForSecurityTest_Example3 (0 ms)
+[ RUN      ] OrderCacheTest.O1_OrderMatchingTest_TestDifferentQuantities
+[       OK ] OrderCacheTest.O1_OrderMatchingTest_TestDifferentQuantities (0 ms)
+[ RUN      ] OrderCacheTest.O2_OrderMatchingTest_TestComplexCombinations
+[       OK ] OrderCacheTest.O2_OrderMatchingTest_TestComplexCombinations (0 ms)
+[ RUN      ] OrderCacheTest.O3_OrderMatchingTest_TestSameCompanyNoMatch
+[       OK ] OrderCacheTest.O3_OrderMatchingTest_TestSameCompanyNoMatch (0 ms)
+[ RUN      ] OrderCacheTest.C1_CancellationTest_CancelNonExistentOrder
+[       OK ] OrderCacheTest.C1_CancellationTest_CancelNonExistentOrder (0 ms)
+[ RUN      ] OrderCacheTest.C2_CancellationTest_CancelOrdersPartialOnMinQty
+[       OK ] OrderCacheTest.C2_CancellationTest_CancelOrdersPartialOnMinQty (0 ms)
+[ RUN      ] OrderCacheTest.C3_CancellationTest_CancelMultipleOrdersForUser
+[       OK ] OrderCacheTest.C3_CancellationTest_CancelMultipleOrdersForUser (0 ms)
+[ RUN      ] OrderCacheTest.M1_MatchingSizeTest_MultipleSmallOrdersMatchingLargeOrder
+[       OK ] OrderCacheTest.M1_MatchingSizeTest_MultipleSmallOrdersMatchingLargeOrder (0 ms)
+[ RUN      ] OrderCacheTest.M2_MatchingSizeTest_MultipleMatchingCombinations
+[       OK ] OrderCacheTest.M2_MatchingSizeTest_MultipleMatchingCombinations (0 ms)
+[ RUN      ] OrderCacheTest.P1_PerfTest_1000_Orders
+[34m[     INFO ] Matched 1000 orders in 0.6 NCUs (3ms)[0m
+[       OK ] OrderCacheTest.P1_PerfTest_1000_Orders (5 ms)
+[ RUN      ] OrderCacheTest.P2_PerfTest_5000_Orders
+[34m[     INFO ] Matched 5000 orders in 2.4 NCUs (12ms)[0m
+[       OK ] OrderCacheTest.P2_PerfTest_5000_Orders (19 ms)
+[ RUN      ] OrderCacheTest.P3_PerfTest_10000_Orders
+[34m[     INFO ] Matched 10000 orders in 7 NCUs (35ms)[0m
+[       OK ] OrderCacheTest.P3_PerfTest_10000_Orders (45 ms)
+[ RUN      ] OrderCacheTest.P4_PerfTest_50000_Orders
+[34m[     INFO ] Matched 50000 orders in 36.4 NCUs (182ms)[0m
+[       OK ] OrderCacheTest.P4_PerfTest_50000_Orders (235 ms)
+[ RUN      ] OrderCacheTest.P5_PerfTest_100000_Orders
+[34m[     INFO ] Matched 100000 orders in 64.8 NCUs (324ms)[0m
+[       OK ] OrderCacheTest.P5_PerfTest_100000_Orders (427 ms)
+[ RUN      ] OrderCacheTest.P6_PerfTest_500000_Orders
+[34m[     INFO ] Matched 500000 orders in 345.8 NCUs (1729ms)[0m
+[       OK ] OrderCacheTest.P6_PerfTest_500000_Orders (2281 ms)
+[ RUN      ] OrderCacheTest.P7_PerfTest_1000000_Orders
+[34m[     INFO ] Matched 1000000 orders in 676.6 NCUs (3383ms)[0m
+[       OK ] OrderCacheTest.P7_PerfTest_1000000_Orders (4571 ms)
+[----------] 23 tests from OrderCacheTest (7599 ms total)
+
+[----------] Global test environment tear-down
+[==========] 23 tests from 1 test suite ran. (7605 ms total)
+[  PASSED  ] 23 tests.
