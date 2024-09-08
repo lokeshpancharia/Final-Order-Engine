@@ -2,8 +2,11 @@
 
 #include <string>
 #include <vector>
-#include <bits/stdc++.h>
-using namespace std;
+#include <unordered_map>
+#include <unordered_set>
+#include <queue>
+#include <utility>
+
 
 class Order
 {
@@ -77,15 +80,6 @@ class OrderCache : public OrderCacheInterface
 {
 
 public:
-  unordered_map<string, Order> orderlist;
-  unordered_map<string, unordered_set<string>> userOrders;
-  // Todo
-  // get this from OrderCachetest
-  static constexpr unsigned int NUM_USERS = 1005;
-  static constexpr unsigned int NUM_COMPANIES = 105;
-  static constexpr unsigned int NUM_SECURITIES = 1005;
-  int securityByCompany[NUM_SECURITIES][NUM_COMPANIES][2];
-  int total_order = 0;
   OrderCache()
   {
     init();
@@ -104,15 +98,31 @@ public:
   std::vector<Order> getAllOrders() const override;
 
 private:
-  std::vector<std::string> sides{"Buy", "Sell"};
-  unordered_map<string, int> securityIdInteger;
-  unordered_map<string, int> companyIdInteger;
-  unordered_map<int, unordered_set<string>> secQtyOrders;
-  // replaced set with priority queue , but no major performance improvement
-  //unordered_map<int, priority_queue<pair<int,string>>> secQtyOrders;
+ // Helper methods and member variables
   void init();
-  int getSecurityId(string securityId);
-  int getCompanyId(string CompanyId);
-  void removeOrderFromSecurityId(string orderId);
-  // Todo...
+  int getSecurityId(const std::string &securityId);
+  int getCompanyId(const std::string &companyId);
+  void removeOrderFromSecurityId(const std::string &orderId);
+
+  std::unordered_map<std::string, Order> orderlist; // Order storage
+  std::unordered_map<std::string, std::unordered_set<std::string>> userOrders; // Orders by user
+
+  static constexpr unsigned int NUM_USERS = 1005;
+  static constexpr unsigned int NUM_COMPANIES = 105;
+  static constexpr unsigned int NUM_SECURITIES = 1005;
+
+  // Security by company, 2D array for tracking
+  int securityByCompany[NUM_SECURITIES][NUM_COMPANIES][2];
+
+    // Store sides (Buy/Sell)
+  std::vector<std::string> sides{"Buy", "Sell"};
+
+    // Mapping security and company IDs to integers
+  std::unordered_map<std::string, int> securityIdInteger;
+  std::unordered_map<std::string, int> companyIdInteger;
+
+    // Orders by security quantity
+  std::unordered_map<int, std::unordered_set<std::string>> secQtyOrders;
+
+  int totalOrders = 0;
 };

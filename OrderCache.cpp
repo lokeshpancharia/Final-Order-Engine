@@ -18,27 +18,27 @@ void OrderCache::init()
 
 // getSecurityId from SecurityId - String
 
-int OrderCache::getSecurityId(string SecurityId)
+int OrderCache::getSecurityId(const std::string &securityId)
 {
-  if (securityIdInteger.find(SecurityId) == securityIdInteger.end())
+  if (securityIdInteger.find(securityId) == securityIdInteger.end())
   {
-    securityIdInteger.emplace(SecurityId, securityIdInteger.size() + 1);
+    securityIdInteger.emplace(securityId, securityIdInteger.size() + 1);
   }
-  return securityIdInteger.at(SecurityId);
+  return securityIdInteger.at(securityId);
 }
 
 // Integer companyId for each Company
-int OrderCache::getCompanyId(string CompanyId)
+int OrderCache::getCompanyId(const std::string &companyId)
 {
-  if (companyIdInteger.find(CompanyId) == companyIdInteger.end())
+  if (companyIdInteger.find(companyId) == companyIdInteger.end())
   {
-    companyIdInteger.emplace(CompanyId, companyIdInteger.size() + 1);
+    companyIdInteger.emplace(companyId, companyIdInteger.size() + 1);
   }
-  return companyIdInteger.at(CompanyId);
+  return companyIdInteger.at(companyId);
 }
 
 // remove order from SecurityId
-void OrderCache::removeOrderFromSecurityId(string orderId)
+void OrderCache::removeOrderFromSecurityId(const std::string &orderId)
 {
   int securityIdforOrder = getSecurityId(orderlist.at(orderId).securityId());
   int companyIdforOrder = getCompanyId(orderlist.at(orderId).company());
