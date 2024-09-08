@@ -1,7 +1,6 @@
 // Todo: your implementation of the OrderCache...
 #include "OrderCache.h"
 #include <algorithm>  // for std::min
-using namespace std;
 // Initialize
 void OrderCache::init()
 {
@@ -43,13 +42,14 @@ void OrderCache::removeOrderFromSecurityId(const std::string &orderId)
   auto it = orderlist.find(orderId);
   if (it != orderlist.end())
   {
-    int securityIdforOrder = getSecurityId(it->second.securityId());
-    int companyIdforOrder = getCompanyId(it->second.company());
-    int side = it->second.side() == sides[0] ? 0 : 1;
-    unsigned int qty = it->second.qty();
+  const Order& order = it->second;
+  int securityIdforOrder = getSecurityId(order.securityId());
+  int companyIdforOrder = getCompanyId(order.company());
+  int side = order.side() == sides[0] ? 0 : 1;
+  unsigned int qty = order.qty();
 
-    // Reduce Qty from the security id for company of this order
-    securityByCompany[securityIdforOrder][companyIdforOrder][side] -= qty;
+  // Reduce Qty from the security id for company of this order
+  securityByCompany[securityIdforOrder][companyIdforOrder][side] -= qty;
   }
 }
 
@@ -104,19 +104,20 @@ void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string &securityI
   if (it == secQtyOrders.end())
       return;
 
-  for (auto orderIt = it->second.begin(); orderIt != it->second.end(); )
+  std::vector<std::string> ordersToRemove;
+  for (const auto &orderId : it->second)
   {
-    const std::string &orderId = *orderIt;
     unsigned qty = orderlist.at(orderId).qty();
     if (qty >= minQty)
     {
-      cancelOrder(orderId);
-      orderIt = it->second.erase(orderIt);  // Erase while iterating
+      ordersToRemove.push_back(orderId);
     }
-    else
-    {
-      ++orderIt;
-    }
+  }
+
+  for (const auto &orderId : ordersToRemove)
+  {
+    cancelOrder(orderId);
+    it->second.erase(orderId);
   }
 }
 
@@ -132,7 +133,7 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityI
     {
       if (!securityByCompany[secId][i][0])
         break;
-      unsigned int matching = min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
+      unsigned int matching = std::min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
       totalMatching  += matching;
       securityByCompany[secId][i][0] -= matching;
       securityByCompany[secId][j][1] -= matching;
@@ -145,7 +146,7 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityI
   {
     if (!securityByCompany[secId][i][0])
       break;
-    unsigned matching = min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
+    unsigned matching = std::min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
     totalMatching  += matching;
     securityByCompany[secId][i][0] -= matching;
     securityByCompany[secId][j][1] -= matching;
@@ -156,7 +157,7 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityI
 // Get all orders in the cache
 std::vector<Order> OrderCache::getAllOrders() const
 {
-  vector<Order> orders;
+  std::vector<Order> orders;
   for (const auto &[orderId, order] : orderlist)
   {
     orders.push_back(order);
