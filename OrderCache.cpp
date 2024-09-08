@@ -128,22 +128,25 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityI
   unsigned int totalMatching  = 0;
   for (i = 1; i < companyIdInteger.size(); i++)
   {
-    for (int j=i+1; j <= companyIdInteger.size(); j++)
+    int j = i + 1;
+
+    for (; j <= companyIdInteger.size(); j++)
     {
       if (!securityByCompany[secId][i][0])
         break;
-      int matching = min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
+      unsigned int matching = min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
       totalMatching  += matching;
       securityByCompany[secId][i][0] -= matching;
       securityByCompany[secId][j][1] -= matching;
     }
   }
+
   // do for last company also by iterating from 1st to last
   for (j = 1; j < companyIdInteger.size(); j++)
   {
     if (!securityByCompany[secId][i][0])
       break;
-    int matching = min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
+    unsigned matching = min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
     totalMatching  += matching;
     securityByCompany[secId][i][0] -= matching;
     securityByCompany[secId][j][1] -= matching;
