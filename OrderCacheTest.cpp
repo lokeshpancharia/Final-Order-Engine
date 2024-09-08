@@ -5,8 +5,13 @@
 #include <iostream>
 #include "OrderCache.h"
 #include "gtest/gtest.h"
+#include <thread>
 
 using namespace std::chrono_literals;
+
+// Number of threads for concurrency testing
+constexpr unsigned int numThreads = 10;
+constexpr unsigned int ordersPerThread = 1000;
 
 // Global flag to indicate test failure
 std::atomic<bool> test_failed{false};
@@ -641,6 +646,227 @@ TEST_F(OrderCacheTest, P7_PerfTest_1000000_Orders)
     std::cout << BLUE_COLOR << "[     INFO ] Matched " << NUM_ORDERS << " orders in " << ncu << " NCUs (" << duration << "ms)" << RESET_COLOR << std::endl;
     ASSERT_LE(ncu, 1500);
 }
+
+// Test P8: Add and match 100,000 orders concurrently
+TEST_F(OrderCacheTest, P8_PerfTest_100000_Orders_Multithreaded) {
+    CHECK_GLOBAL_FAILURE_FLAG();
+
+    unsigned int NUM_ORDERS = 100000;
+    std::vector<Order> orders = generateOrders(NUM_ORDERS);
+    const unsigned int numThreads = 10;
+    const unsigned int ordersPerThread = NUM_ORDERS / numThreads;
+    std::vector<std::thread> threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // Add orders to the cache concurrently
+    for (unsigned int t = 0; t < numThreads; ++t) {
+        threads.emplace_back([this, t, &orders, ordersPerThread]() {
+            for (unsigned int i = t * ordersPerThread; i < (t + 1) * ordersPerThread; ++i) {
+                cache.addOrder(orders[i]);
+            }
+        });
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    // Clear thread vector for reuse
+    threads.clear();
+
+    // Get matching size concurrently
+    for (unsigned int t = 0; t < numThreads; ++t) {
+        threads.emplace_back([this]() {
+            for (const auto &secId : secIds) {
+                cache.getMatchingSizeForSecurity(secId);
+            }
+        });
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    double ncu = duration / benchmark_time;  // Calculate the NCU based on benchmark
+
+    // Display the result
+    std::cout << BLUE_COLOR << "[     INFO ] Matched " << NUM_ORDERS << " orders in " << ncu << " NCUs (" << duration << "ms)" << RESET_COLOR << std::endl;
+    ASSERT_LE(ncu, 1500);
+}
+
+
+// Test P9: Add and match 500,000 orders concurrently
+TEST_F(OrderCacheTest, P9_PerfTest_500000_Orders_Multithreaded) {
+    CHECK_GLOBAL_FAILURE_FLAG();
+
+    unsigned int NUM_ORDERS = 500000;
+    std::vector<Order> orders = generateOrders(NUM_ORDERS);
+    const unsigned int numThreads = 10;
+    const unsigned int ordersPerThread = NUM_ORDERS / numThreads;
+    std::vector<std::thread> threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // Add orders to the cache concurrently
+    for (unsigned int t = 0; t < numThreads; ++t) {
+        threads.emplace_back([this, t, &orders, ordersPerThread]() {
+            for (unsigned int i = t * ordersPerThread; i < (t + 1) * ordersPerThread; ++i) {
+                cache.addOrder(orders[i]);
+            }
+        });
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    // Clear thread vector for reuse
+    threads.clear();
+
+    // Get matching size concurrently
+    for (unsigned int t = 0; t < numThreads; ++t) {
+        threads.emplace_back([this]() {
+            for (const auto &secId : secIds) {
+                cache.getMatchingSizeForSecurity(secId);
+            }
+        });
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    double ncu = duration / benchmark_time;  // Calculate the NCU based on benchmark
+
+    // Display the result
+    std::cout << BLUE_COLOR << "[     INFO ] Matched " << NUM_ORDERS << " orders in " << ncu << " NCUs (" << duration << "ms)" << RESET_COLOR << std::endl;
+    ASSERT_LE(ncu, 1500);
+}
+
+
+// Test P10: Add and match 1,000,000 orders concurrently
+TEST_F(OrderCacheTest, P10_PerfTest_1000000_Orders_Multithreaded) {
+    CHECK_GLOBAL_FAILURE_FLAG();
+
+    unsigned int NUM_ORDERS = 1000000;
+    std::vector<Order> orders = generateOrders(NUM_ORDERS);
+    const unsigned int numThreads = 10;
+    const unsigned int ordersPerThread = NUM_ORDERS / numThreads;
+    std::vector<std::thread> threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // Add orders to the cache concurrently
+    for (unsigned int t = 0; t < numThreads; ++t) {
+        threads.emplace_back([this, t, &orders, ordersPerThread]() {
+            for (unsigned int i = t * ordersPerThread; i < (t + 1) * ordersPerThread; ++i) {
+                cache.addOrder(orders[i]);
+            }
+        });
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    // Clear thread vector for reuse
+    threads.clear();
+
+    // Get matching size concurrently
+    for (unsigned int t = 0; t < numThreads; ++t) {
+        threads.emplace_back([this]() {
+            for (const auto &secId : secIds) {
+                cache.getMatchingSizeForSecurity(secId);
+            }
+        });
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    double ncu = duration / benchmark_time;  // Calculate the NCU based on benchmark
+
+    // Display the result
+    std::cout << BLUE_COLOR << "[     INFO ] Matched " << NUM_ORDERS << " orders in " << ncu << " NCUs (" << duration << "ms)" << RESET_COLOR << std::endl;
+    ASSERT_LE(ncu, 1500);
+}
+
+
+// Test P11: Add and match 1,000,000 orders concurrently with optimized code
+TEST_F(OrderCacheTest, P11_PerfTest_1000000_Orders_Multithreaded_Optimized) {
+    CHECK_GLOBAL_FAILURE_FLAG();
+
+    unsigned int NUM_ORDERS = 1000000;
+    std::vector<Order> orders = generateOrders(NUM_ORDERS);
+    const unsigned int numThreads = 16;  // Experiment with more threads
+    const unsigned int ordersPerThread = NUM_ORDERS / numThreads;
+    std::vector<std::thread> threads;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    // Batch add orders to the cache concurrently
+    for (unsigned int t = 0; t < numThreads; ++t) {
+        threads.emplace_back([this, t, &orders, ordersPerThread]() {
+            for (unsigned int i = t * ordersPerThread; i < (t + 1) * ordersPerThread; i += 100) {
+                // Add orders in batches of 100
+                for (unsigned int j = i; j < std::min(i + 100, t * ordersPerThread + ordersPerThread); ++j) {
+                    cache.addOrder(orders[j]);
+                }
+            }
+        });
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    // Clear thread vector for reuse
+    threads.clear();
+
+    // Concurrently get matching size for all securities
+    for (unsigned int t = 0; t < numThreads; ++t) {
+        threads.emplace_back([this]() {
+            for (const auto &secId : secIds) {
+                cache.getMatchingSizeForSecurity(secId);
+            }
+        });
+    }
+
+    // Join threads
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    double ncu = duration / benchmark_time;  // Calculate the NCU based on benchmark
+
+    // Display the result
+    std::cout << BLUE_COLOR << "[     INFO ] Matched " << NUM_ORDERS << " orders in " << ncu << " NCUs (" << duration << "ms)" << RESET_COLOR << std::endl;
+    ASSERT_LE(ncu, 1500);
+}
+
+
+
 
 int main(int argc, char **argv)
 {
