@@ -1,215 +1,123 @@
 // Todo: your implementation of the OrderCache...
 #include "OrderCache.h"
-#include <algorithm>  // for std::min
-#include <thread>
-
-
-std::unordered_map<std::string, std::mutex> orderLocks; // Map of orderId to mutex
-std::mutex orderLocksMapMutex; // Mutex to protect access to orderLocks map
-
-// Helper function to get or create a mutex for a specific orderId
-std::mutex& OrderCache::getOrderLock(const std::string& orderId) {
-    std::unique_lock lock(orderLocksMapMutex); // Lock to ensure safe access to the map
-    return orderLocks[orderId]; // Will create the mutex if it doesn't exist
-}
-
-// Initialize
-void OrderCache::init()
-{
-  for (int i = 0; i < NUM_SECURITIES; ++i)
-  {
-    for (int j = 0; j < NUM_COMPANIES; ++j)
-    {
-      securityByCompany[i][j][0] = 0;
-      securityByCompany[i][j][1] = 0;
-    }
-  }
-}
-
-// getSecurityId from SecurityId - String to Integer
-int OrderCache::getSecurityId(const std::string &securityId)
-{
-  auto it = securityIdInteger.find(securityId);
-    if (it == securityIdInteger.end())
-    {
-        it = securityIdInteger.emplace(securityId, securityIdInteger.size() + 1).first;
-    }
-    return it->second;
-}
-
-// Get company ID from company identifier (string)
-int OrderCache::getCompanyId(const std::string &companyId)
-{
-  auto it = companyIdInteger.find(companyId);
-  if (it == companyIdInteger.end())
-  {
-    it = companyIdInteger.emplace(companyId, companyIdInteger.size() + 1).first;
-  }
-  return it->second;
-}
-
-// Remove order from security ID
-void OrderCache::removeOrderFromSecurityId(const std::string &orderId)
-{
-  std::mutex &orderLock = getOrderLock(orderId); // Get the lock for this orderId
-    std::lock_guard lock(orderLock); // Lock the specific orderId
-
-  auto it = orderlist.find(orderId);
-  if (it != orderlist.end())
-  {
-  const Order& order = it->second;
-  int securityIdforOrder = getSecurityId(order.securityId());
-  int companyIdforOrder = getCompanyId(order.company());
-  int side = order.side() == sides[0] ? 0 : 1;
-  unsigned int qty = order.qty();
-
-  // Reduce Qty from the security id for company of this order
-  securityByCompany[securityIdforOrder][companyIdforOrder][side] -= qty;
-  }
-}
-
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <map>
+#include <iostream>
+#include <algorithm>
 
 // Add an order to the cache
-void OrderCache::addOrder(Order order)
-{
-    std::mutex &orderLock = getOrderLock(order.orderId()); // Get the lock for this orderId
-    std::lock_guard lock(orderLock); // Lock the specific orderId
-    orderlist.emplace(order.orderId(), order);
-    userOrders[order.user()].emplace(order.orderId());
-
-    int securityId = getSecurityId(order.securityId());
-    int companyId = getCompanyId(order.company());
-    int side = (order.side() == sides[0]) ? 0 : 1;
-
-    secQtyOrders[securityId].emplace(order.orderId());
-
-    // Update order quantity
-    securityByCompany[securityId][companyId][side] += order.qty();
-}
-// Cancel an order by order ID
-void OrderCache::cancelOrder(const std::string &orderId)
-{
-  auto it = orderlist.find(orderId);
-  if (it != orderlist.end())
-  {
-      const std::string &userId = it->second.user();
-      userOrders[userId].erase(orderId);
-      removeOrderFromSecurityId(orderId);
-      orderlist.erase(orderId);
-  }
+void OrderCache::addOrder(Order order) {
+    auto it = ordersBySecId.emplace(order.securityId(), order);
+    ordersById[order.orderId()] = it;
+    ordersByUser[order.user()].push_back(it);
 }
 
-
-void OrderCache::removeOrderInParallel(const std::vector<std::string>& orderIds)
-{
-    std::vector<std::thread> threads;
-
-    for (const auto& orderId : orderIds)
-    {
-        threads.emplace_back([this, &orderId]() {
-            this->removeOrderFromSecurityId(orderId);
-        });
-    }
-
-    for (auto& thread : threads)
-    {
-        if (thread.joinable())
-            thread.join();
+// Cancel a specific order by its orderId
+void OrderCache::cancelOrder(const std::string& orderId) {
+    auto it = ordersById.find(orderId);
+    if (it != ordersById.end()) {
+        // Remove from the security map
+        ordersBySecId.erase(it->second);
+        // Remove from the user list
+        removeOrderFromUserMap(it->second->second.user(), it->second);
+        // Remove from the orderId map
+        ordersById.erase(it);
     }
 }
-
 
 // Cancel all orders for a specific user
-void OrderCache::cancelOrdersForUser(const std::string &user)
-{
-  auto it = userOrders.find(user);
-  if (it == userOrders.end())
-    return;
-
- std::vector<std::string> ordersToCancel(it->second.begin(), it->second.end());
-
-    // Divide the work into smaller chunks and process in parallel
-    int segmentSize = 4; // Adjust size according to performance needs
-    for (size_t i = 0; i < ordersToCancel.size(); i += segmentSize)
-    {
-        std::vector<std::string> segment(ordersToCancel.begin() + i, 
-                 ordersToCancel.begin() + std::min(i + segmentSize, ordersToCancel.size()));
-        removeOrderInParallel(segment);
+void OrderCache::cancelOrdersForUser(const std::string& user) {
+    auto it = ordersByUser.find(user);
+    if (it != ordersByUser.end()) {
+        for (auto orderIt : it->second) {
+            ordersBySecId.erase(orderIt);
+            ordersById.erase(orderIt->second.orderId());
+        }
+        ordersByUser.erase(it);
     }
-
-  userOrders[user].clear();
 }
 
-// Cancel orders for a security ID that have a quantity greater than or equal to a minimum quantity
-void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string &securityId, unsigned int minQty)
-{
-  int secId = getSecurityId(securityId);
-  auto it = secQtyOrders.find(secId);
-  if (it == secQtyOrders.end())
-      return;
-
-  std::vector<std::string> ordersToRemove;
-  for (const auto &orderId : it->second)
-  {
-    unsigned qty = orderlist.at(orderId).qty();
-    if (qty >= minQty)
-    {
-      ordersToRemove.push_back(orderId);
+// Cancel orders for a specific security with a minimum quantity
+void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string& securityId, unsigned int minQty) {
+    auto range = ordersBySecId.equal_range(securityId);
+    for (auto it = range.first; it != range.second; ) {
+        if (it->second.qty() >= minQty) {
+            removeOrderFromUserMap(it->second.user(), it);
+            ordersById.erase(it->second.orderId());
+            it = ordersBySecId.erase(it);  // Move to the next iterator
+        } else {
+            ++it;
+        }
     }
-  }
-
-  // Divide the work into smaller chunks and process in parallel
-    int segmentSize = 4; // Adjust size according to performance needs
-    for (size_t i = 0; i < ordersToRemove.size(); i += segmentSize)
-    {
-        std::vector<std::string> segment(ordersToRemove.begin() + i, 
-                  ordersToRemove.begin() + std::min(i + segmentSize, ordersToRemove.size()));
-        removeOrderInParallel(segment);
-    }
-
-   it->second.clear();
 }
 
-// Get the matching size for a given security ID
-unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityId)
-{
-  int secId = getSecurityId(securityId);
-  unsigned int totalMatching  = 0;
- int i = 1, j = 2; // Start with two pointers
-  for (i = 1; i < companyIdInteger.size(); ++i)
-  {
-    for (j=i+1; j <= companyIdInteger.size(); ++j)
-    {
-      if (!securityByCompany[secId][i][0])
-        break;
-      unsigned int matching = std::min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
-      totalMatching  += matching;
-      securityByCompany[secId][i][0] -= matching;
-      securityByCompany[secId][j][1] -= matching;
+// Get the total matching size for a security
+unsigned int OrderCache::getMatchingSizeForSecurity(const std::string& securityId) {
+    unsigned int totalMatchingSize = 0;
+    auto range = ordersBySecId.equal_range(securityId);
+
+    std::vector<std::multimap<std::string, Order>::iterator> buyOrders;
+    std::vector<std::multimap<std::string, Order>::iterator> sellOrders;
+
+    // Separate Buy and Sell orders
+    for (auto it = range.first; it != range.second; ++it) {
+        if (it->second.side() == "Buy") {
+            buyOrders.push_back(it);
+        } else if (it->second.side() == "Sell") {
+            sellOrders.push_back(it);
+        }
     }
-  }
 
+    // Match Buy and Sell orders
+    for (auto buyIt = buyOrders.begin(); buyIt != buyOrders.end(); ++buyIt) {
+        for (auto sellIt = sellOrders.begin(); sellIt != sellOrders.end(); ) {
+            Order& buyOrder = (*buyIt)->second;
+            Order& sellOrder = (*sellIt)->second;
 
-  // do for last company also by iterating from 1st to last
-  for (j = 1; j < companyIdInteger.size(); ++j)
-  {
-    if (!securityByCompany[secId][i][0])
-      break;
-    unsigned matching = std::min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
-    totalMatching  += matching;
-    securityByCompany[secId][i][0] -= matching;
-    securityByCompany[secId][j][1] -= matching;
-  }
-  return totalMatching ;
+            if (buyOrder.company() != sellOrder.company()) {
+                unsigned int matchQty = std::min(buyOrder.qty(), sellOrder.qty());
+                totalMatchingSize += matchQty;
+
+                // Reduce quantities in both buy and sell orders
+                buyOrder.reduceQty(matchQty);
+                sellOrder.reduceQty(matchQty);
+
+                // If sell order is fully matched, move to the next sell order
+                if (sellOrder.qty() == 0) {
+                    sellIt = sellOrders.erase(sellIt);
+                } else {
+                    ++sellIt;
+                }
+
+                // If buy order is fully matched, break and move to the next buy order
+                if (buyOrder.qty() == 0) {
+                    break;
+                }
+            } else {
+                ++sellIt;  // Skip if same company
+            }
+        }
+    }
+
+    return totalMatchingSize;
 }
 
-// Get all orders in the cache
-std::vector<Order> OrderCache::getAllOrders() const
-{
-  std::vector<Order> orders;
-  for (const auto &[orderId, order] : orderlist)
-  {
-    orders.push_back(order);
-  }
-  return orders;
+// Get all orders
+std::vector<Order> OrderCache::getAllOrders() const {
+    std::vector<Order> allOrders;
+    for (const auto& orderPair : ordersBySecId) {
+        allOrders.push_back(orderPair.second);
+    }
+    return allOrders;
+}
+
+// Helper method to remove an order from the user map
+void OrderCache::removeOrderFromUserMap(const std::string& user, std::multimap<std::string, Order>::iterator orderIt) {
+    auto& userOrders = ordersByUser[user];
+    userOrders.erase(std::remove(userOrders.begin(), userOrders.end(), orderIt), userOrders.end());
+    if (userOrders.empty()) {
+        ordersByUser.erase(user);
+    }
 }
