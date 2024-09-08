@@ -71,15 +71,18 @@ void OrderCache::cancelOrder(const std::string &orderId) {
 }
 
 // Cancel all orders for a specific user
-void OrderCache::cancelOrdersForUser(const std::string &user) {
-    auto it = userOrders.find(user);
-    if (it == userOrders.end()) return;
+void OrderCache::cancelOrdersForUser(const std::string &userId) {
+  auto userOrdersIt = userOrders.find(userId);
+  if (userOrdersIt == userOrders.end())
+    return;
 
-    for (const auto &orderId : it->second) {
-        cancelOrder(orderId);
-    }
-    userOrders[user].clear();
+  std::vector<std::string> ordersToCancel(userOrdersIt->second.begin(), userOrdersIt->second.end());
+  for (const auto &orderId : ordersToCancel) {
+     cancelOrder(orderId);
+  }
+  userOrders[userId].clear();
 }
+
 
 // Cancel orders for a security with quantity >= minQty
 void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string &securityId, unsigned int minQty) {
