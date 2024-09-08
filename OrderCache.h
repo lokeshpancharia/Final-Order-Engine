@@ -108,6 +108,8 @@ private:
   unordered_map<string, int> securityIdInteger;
   unordered_map<string, int> companyIdInteger;
   unordered_map<int, unordered_set<string>> secQtyOrders;
+  // replaced set with priority queue , but no major performance improvement
+  //unordered_map<int, priority_queue<pair<int,string>>> secQtyOrders;
   void init();
   int getSecurityId(string securityId);
   int getCompanyId(string CompanyId);
