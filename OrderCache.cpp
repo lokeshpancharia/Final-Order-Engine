@@ -69,27 +69,26 @@ void OrderCache::addOrder(Order order)
     // Update order quantity
     securityByCompany[securityId][companyId][side] += order.qty();
 }
-
+// Cancel an order by order ID
 void OrderCache::cancelOrder(const std::string &orderId)
 {
-  // Todo...
-  if (orderlist.find(orderId) != orderlist.end())
+  auto it = orderlist.find(orderId);
+  if (it != orderlist.end())
   {
-    string userId = orderlist.at(orderId).user();
-    userOrders[userId].erase(orderId);
-    // Need to remove security Id and Quantity from this order
-    removeOrderFromSecurityId(orderId);
-    orderlist.erase(orderId);
+      const std::string &userId = it->second.user();
+      userOrders[userId].erase(orderId);
+      removeOrderFromSecurityId(orderId);
+      orderlist.erase(orderId);
   }
 }
-
+// Cancel all orders for a specific user
 void OrderCache::cancelOrdersForUser(const std::string &user)
 {
-  // Todo...
-  if (userOrders.find(user) == userOrders.end())
+  auto it = userOrders.find(user);
+  if (it == userOrders.end())
     return;
-  std::vector<std::string> ordersToCancel(userOrders[user].begin(), userOrders[user].end());
 
+  std::vector<std::string> ordersToCancel(it->second.begin(), it->second.end());
   for (const auto &orderId : ordersToCancel)
   {
     cancelOrder(orderId);
@@ -97,64 +96,68 @@ void OrderCache::cancelOrdersForUser(const std::string &user)
   userOrders[user].clear();
 }
 
+// Cancel orders for a security ID that have a quantity greater than or equal to a minimum quantity
 void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string &securityId, unsigned int minQty)
 {
-  // Todo...
   int secId = getSecurityId(securityId);
-  if (secQtyOrders.find(secId) == secQtyOrders.end())
-    return;
-  for (auto &order : secQtyOrders.at(secId))
+  auto it = secQtyOrders.find(secId);
+  if (it == secQtyOrders.end())
+      return;
+
+  for (auto orderIt = it->second.begin(); orderIt != it->second.end(); )
   {
-    unsigned qty = orderlist.at(order).qty();
+    const std::string &orderId = *orderIt;
+    unsigned qty = orderlist.at(orderId).qty();
     if (qty >= minQty)
     {
-      cancelOrder(order);
-      secQtyOrders[secId].erase(order);
+      cancelOrder(orderId);
+      orderIt = it->second.erase(orderIt);  // Erase while iterating
+    }
+    else
+    {
+      ++orderIt;
     }
   }
 }
 
+// Get the matching size for a given security ID
 unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityId)
 {
-  // Todo...
   int secId = getSecurityId(securityId);
   int i, j;
-  unsigned int ans = 0;
+  unsigned int totalMatching  = 0;
   for (i = 1; i < companyIdInteger.size(); i++)
   {
-    int j = i + 1;
-
-    for (; j <= companyIdInteger.size(); j++)
+    for (int j=i+1; j <= companyIdInteger.size(); j++)
     {
       if (!securityByCompany[secId][i][0])
         break;
       int matching = min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
-      ans += matching;
+      totalMatching  += matching;
       securityByCompany[secId][i][0] -= matching;
       securityByCompany[secId][j][1] -= matching;
     }
   }
-
   // do for last company also by iterating from 1st to last
   for (j = 1; j < companyIdInteger.size(); j++)
   {
     if (!securityByCompany[secId][i][0])
       break;
     int matching = min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
-    ans += matching;
+    totalMatching  += matching;
     securityByCompany[secId][i][0] -= matching;
     securityByCompany[secId][j][1] -= matching;
   }
-  return ans;
+  return totalMatching ;
 }
 
+// Get all orders in the cache
 std::vector<Order> OrderCache::getAllOrders() const
 {
-  // Todo...
   vector<Order> orders;
-  for (auto &[k, v] : orderlist)
+  for (const auto &[orderId, order] : orderlist)
   {
-    orders.push_back(v);
+    orders.push_back(order);
   }
   return orders;
 }
