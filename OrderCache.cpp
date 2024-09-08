@@ -125,19 +125,34 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityI
 {
   int secId = getSecurityId(securityId);
   unsigned int totalMatching  = 0;
-  int i,j; // loop variables
-  for (i = 1; i < companyIdInteger.size(); ++i)
-  {
-    for (j=i+1; j <= companyIdInteger.size(); ++j)
-    {
-      if (!securityByCompany[secId][i][0])
-        break;
-      unsigned int matching = min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
-      totalMatching  += matching;
-      securityByCompany[secId][i][0] -= matching;
-      securityByCompany[secId][j][1] -= matching;
+ int i = 1, j = 2; // Start with two pointers
+  while (i < companyIdInteger.size() && j <= companyIdInteger.size()) {
+    if (!securityByCompany[secId][i][0]) {
+        // If securityByCompany[secId][i][0] is zero, no need to continue with this `i`
+        i++;
+        j = i + 1; // Reset j to the next element after i
+        continue;
+    }
+    
+    unsigned int matching = std::min(securityByCompany[secId][i][0], securityByCompany[secId][j][1]);
+    totalMatching += matching;
+
+    // Update the values
+    securityByCompany[secId][i][0] -= matching;
+    securityByCompany[secId][j][1] -= matching;
+
+    // Move j to the next element if it has run out
+    if (securityByCompany[secId][j][1] == 0) {
+        j++;
+    }
+
+    // If `j` has moved past the bounds, move `i` to the next
+    if (j > companyIdInteger.size()) {
+        i++;
+        j = i + 1; // Reset j for the next valid pair
     }
   }
+
 
   // do for last company also by iterating from 1st to last
   for (j = 1; j < companyIdInteger.size(); ++j)
