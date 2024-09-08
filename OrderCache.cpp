@@ -1,14 +1,13 @@
 // Todo: your implementation of the OrderCache...
 #include "OrderCache.h"
+#include <algorithm>  // for std::min
 using namespace std;
-
 // Initialize
 void OrderCache::init()
 {
-  int i, j;
-  for (i = 0; i < NUM_SECURITIES; i++)
+  for (int i = 0; i < NUM_SECURITIES; ++i)
   {
-    for (j = 0; j < NUM_COMPANIES; j++)
+    for (int j = 0; j < NUM_COMPANIES; ++j)
     {
       securityByCompany[i][j][0] = 0;
       securityByCompany[i][j][1] = 0;
@@ -16,54 +15,59 @@ void OrderCache::init()
   }
 }
 
-// getSecurityId from SecurityId - String
-
+// getSecurityId from SecurityId - String to Integer
 int OrderCache::getSecurityId(const std::string &securityId)
 {
-  if (securityIdInteger.find(securityId) == securityIdInteger.end())
-  {
-    securityIdInteger.emplace(securityId, securityIdInteger.size() + 1);
-  }
-  return securityIdInteger.at(securityId);
+  auto it = securityIdInteger.find(securityId);
+    if (it == securityIdInteger.end())
+    {
+        it = securityIdInteger.emplace(securityId, securityIdInteger.size() + 1).first;
+    }
+    return it->second;
 }
 
-// Integer companyId for each Company
+// Get company ID from company identifier (string)
 int OrderCache::getCompanyId(const std::string &companyId)
 {
-  if (companyIdInteger.find(companyId) == companyIdInteger.end())
+  auto it = companyIdInteger.find(companyId);
+  if (it == companyIdInteger.end())
   {
-    companyIdInteger.emplace(companyId, companyIdInteger.size() + 1);
+    it = companyIdInteger.emplace(companyId, companyIdInteger.size() + 1).first;
   }
-  return companyIdInteger.at(companyId);
+  return it->second;
 }
 
-// remove order from SecurityId
+// Remove order from security ID
 void OrderCache::removeOrderFromSecurityId(const std::string &orderId)
 {
-  int securityIdforOrder = getSecurityId(orderlist.at(orderId).securityId());
-  int companyIdforOrder = getCompanyId(orderlist.at(orderId).company());
-  int side = orderlist.at(orderId).side() == sides[0] ? 0 : 1;
-  unsigned int qty = orderlist.at(orderId).qty();
+  auto it = orderlist.find(orderId);
+  if (it != orderlist.end())
+  {
+    int securityIdforOrder = getSecurityId(it->second.securityId());
+    int companyIdforOrder = getCompanyId(it->second.company());
+    int side = it->second.side() == sides[0] ? 0 : 1;
+    unsigned int qty = it->second.qty();
 
-  // Reduce Qty from the security id for company of this order
-  securityByCompany[securityIdforOrder][companyIdforOrder][side] -= qty;
+    // Reduce Qty from the security id for company of this order
+    securityByCompany[securityIdforOrder][companyIdforOrder][side] -= qty;
+  }
 }
-// Function definition for the files
+
+
+// Add an order to the cache
 void OrderCache::addOrder(Order order)
 {
-  Order curOrder(order.orderId(), order.securityId(), order.side(), order.qty(), order.user(), order.company());
-  orderlist.emplace(order.orderId(), curOrder);
-  userOrders[order.user()].emplace(order.orderId());
+    orderlist.emplace(order.orderId(), order);
+    userOrders[order.user()].emplace(order.orderId());
 
-  int securityId = getSecurityId(order.securityId());
-  int companyId = getCompanyId(order.company());
-  int side = (order.side() == sides[0]) ? 0 : 1;
+    int securityId = getSecurityId(order.securityId());
+    int companyId = getCompanyId(order.company());
+    int side = (order.side() == sides[0]) ? 0 : 1;
 
-  secQtyOrders[securityId].emplace(order.orderId());
-  // securityQuantityOrderlist.emplace(make_pair(securityId, order.qty()), order.orderId());
+    secQtyOrders[securityId].emplace(order.orderId());
 
-  // update orderQuantiy
-  securityByCompany[securityId][companyId][side] += order.qty();
+    // Update order quantity
+    securityByCompany[securityId][companyId][side] += order.qty();
 }
 
 void OrderCache::cancelOrder(const std::string &orderId)
