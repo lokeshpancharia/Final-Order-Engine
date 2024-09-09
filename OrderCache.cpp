@@ -124,11 +124,11 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string& securityI
 
 // Get all orders
 std::vector<Order> OrderCache::getAllOrders() const {
-    std::shared_lock<std::shared_mutex> secIdLock(secIdMutex);
     std::vector<Order> allOrders;
     for (const auto& orderPair : ordersBySecId) {
         allOrders.push_back(orderPair.second);
     }
+    //std::for_each(std::execution::par, allOrders.begin(), allOrders.end(), [&](const auto& orderPair) { allOrders.push_back(orderPair.second); });
     return allOrders;
 }
 
