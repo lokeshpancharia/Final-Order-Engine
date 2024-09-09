@@ -42,7 +42,10 @@ void OrderCache::removeOrderFromSecurity(const std::string &orderId) {
         int securityId = getSecurityId(order.securityId());
         int companyId = getCompanyId(order.company());
         int side = (order.side() == sides[0]) ? 0 : 1;
-        securityByCompany[securityId][companyId][side] -= order.qty();
+         // Bounds checking
+        if (securityId < NUM_SECURITIES && companyId < NUM_COMPANIES && side < 2) {
+            securityByCompany[securityId][companyId][side] -= order.qty();
+        }
     }
 }
 
@@ -55,8 +58,11 @@ void OrderCache::addOrder(Order order) {
     int companyId = getCompanyId(order.company());
     int side = (order.side() == sides[0]) ? 0 : 1;
 
-    secQtyOrders[securityId].emplace(order.orderId());
-    securityByCompany[securityId][companyId][side] += order.qty();
+     // Bounds checking
+    if (securityId < NUM_SECURITIES && companyId < NUM_COMPANIES && side < 2) {
+        secQtyOrders[securityId].emplace(order.orderId());
+        securityByCompany[securityId][companyId][side] += order.qty();
+    }
 }
 
 // Cancel an order by order ID
@@ -112,6 +118,9 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityI
     int companyIndex1, companyIndex2; 
     for (companyIndex1 = 1; companyIndex1 < companyIdMap.size(); ++companyIndex1) {
         for (companyIndex2 = companyIndex1 + 1; companyIndex2 <= companyIdMap.size(); ++companyIndex2) {
+            // Bounds checking
+            if (securityIdInt >= NUM_SECURITIES || companyIndex1 >= NUM_COMPANIES || companyIndex2 >= NUM_COMPANIES)
+                continue;
             if (!securityByCompany[securityIdInt][companyIndex1][0]) 
                 break;
             unsigned int matchingQty = std::min(securityByCompany[securityIdInt][companyIndex1][0], 
@@ -124,6 +133,8 @@ unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityI
 
     // Iterate from the first company to the last for additional matching
     for (companyIndex2 = 1; companyIndex2 < companyIdMap.size(); ++companyIndex2) {
+        if (securityIdInt >= NUM_SECURITIES || companyIndex1 >= NUM_COMPANIES || companyIndex2 >= NUM_COMPANIES)
+            continue;
         if (!securityByCompany[securityIdInt][companyIndex1][0])
             break;
         unsigned int matchingQty = std::min(securityByCompany[securityIdInt][companyIndex1][0], 
