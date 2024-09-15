@@ -112,40 +112,76 @@ void OrderCache::cancelOrdersForSecIdWithMinimumQty(const std::string &securityI
 // Get the matching size for a given security ID
 unsigned int OrderCache::getMatchingSizeForSecurity(const std::string &securityId) {
     int securityIdInt = getSecurityId(securityId);
-    unsigned int totalMatchingQty = 0;
 
-    // Start with two pointers
-    int companyIndex1, companyIndex2; 
-    for (companyIndex1 = 1; companyIndex1 < companyIdMap.size(); ++companyIndex1) {
-        for (companyIndex2 = companyIndex1 + 1; companyIndex2 <= companyIdMap.size(); ++companyIndex2) {
-            // Bounds checking
-            if (securityIdInt >= NUM_SECURITIES || companyIndex1 >= NUM_COMPANIES || companyIndex2 >= NUM_COMPANIES)
-                continue;
-            if (!securityByCompany[securityIdInt][companyIndex1][0]) 
-                break;
-            unsigned int matchingQty = std::min(securityByCompany[securityIdInt][companyIndex1][0], 
-                                                securityByCompany[securityIdInt][companyIndex2][1]);
-            totalMatchingQty += matchingQty;
-            securityByCompany[securityIdInt][companyIndex1][0] -= matchingQty;
-            securityByCompany[securityIdInt][companyIndex2][1] -= matchingQty;
+    // Collect buy and sell quantities per company
+    std::unordered_map<int, unsigned int> buyQtyPerCompany;
+    std::unordered_map<int, unsigned int> sellQtyPerCompany;
+
+    // Iterate over companies to populate buy and sell quantities
+    for (const auto& companyPair : companyIdMap) {
+        int companyId = companyPair.second;
+        unsigned int buyQty = securityByCompany[securityIdInt][companyId][0];
+        unsigned int sellQty = securityByCompany[securityIdInt][companyId][1];
+
+        if (buyQty > 0) {
+            buyQtyPerCompany[companyId] = buyQty;
+        }
+        if (sellQty > 0) {
+            sellQtyPerCompany[companyId] = sellQty;
         }
     }
 
-    // Iterate from the first company to the last for additional matching
-    for (companyIndex2 = 1; companyIndex2 < companyIdMap.size(); ++companyIndex2) {
-        if (securityIdInt >= NUM_SECURITIES || companyIndex1 >= NUM_COMPANIES || companyIndex2 >= NUM_COMPANIES)
-            continue;
-        if (!securityByCompany[securityIdInt][companyIndex1][0])
-            break;
-        unsigned int matchingQty = std::min(securityByCompany[securityIdInt][companyIndex1][0], 
-                                            securityByCompany[securityIdInt][companyIndex2][1]);
-        totalMatchingQty += matchingQty;
-        securityByCompany[securityIdInt][companyIndex1][0] -= matchingQty;
-        securityByCompany[securityIdInt][companyIndex2][1] -= matchingQty;
+    // Calculate total buy and sell quantities
+    unsigned int totalBuyQty = 0;
+    for (const auto& pair : buyQtyPerCompany) {
+        totalBuyQty += pair.second;
     }
 
-    return totalMatchingQty;
+    unsigned int totalSellQty = 0;
+    for (const auto& pair : sellQtyPerCompany) {
+        totalSellQty += pair.second;
+    }
+
+    unsigned int potentialMatchingFromBuy = 0;
+    // Calculate potential matching from the buy side
+    for (const auto& buyPair : buyQtyPerCompany) {
+        int buyCompanyId = buyPair.first;
+        unsigned int buyQty = buyPair.second;
+
+        // Total sell quantity excluding the buy company
+        unsigned int sellQtyFromOtherCompanies = totalSellQty;
+        auto it = sellQtyPerCompany.find(buyCompanyId);
+        if (it != sellQtyPerCompany.end()) {
+            sellQtyFromOtherCompanies -= it->second;
+        }
+
+        unsigned int potentialMatchQty = std::min(buyQty, sellQtyFromOtherCompanies);
+        potentialMatchingFromBuy += potentialMatchQty;
+    }
+
+    unsigned int potentialMatchingFromSell = 0;
+    // Calculate potential matching from the sell side
+    for (const auto& sellPair : sellQtyPerCompany) {
+        int sellCompanyId = sellPair.first;
+        unsigned int sellQty = sellPair.second;
+
+        // Total buy quantity excluding the sell company
+        unsigned int buyQtyFromOtherCompanies = totalBuyQty;
+        auto it = buyQtyPerCompany.find(sellCompanyId);
+        if (it != buyQtyPerCompany.end()) {
+            buyQtyFromOtherCompanies -= it->second;
+        }
+
+        unsigned int potentialMatchQty = std::min(sellQty, buyQtyFromOtherCompanies);
+        potentialMatchingFromSell += potentialMatchQty;
+    }
+
+    // The total matched quantity is the minimum of the two potentials
+    unsigned int totalMatchedQty = std::min(potentialMatchingFromBuy, potentialMatchingFromSell);
+
+    return totalMatchedQty;
 }
+
 
 
 
